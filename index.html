@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boomerang — Message Scheduler</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1a1a">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f5f2;
+    --surface: #ffffff;
+    --ink: #1a1a1a;
+    --ink-soft: #555;
+    --ink-muted: #999;
+    --border: #e8e4dd;
+    --accent: #2563eb;
+    --accent-soft: #dbeafe;
+    --success: #059669;
+    --success-soft: #d1fae5;
+    --warn: #d97706;
+    --warn-soft: #fef3c7;
+    --danger: #dc2626;
+    --danger-soft: #fee2e2;
+    --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', -apple-system, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 32px 20px 80px;
+  }
+
+  .container {
+    max-width: 920px;
+    margin: 0 auto;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo {
+    width: 40px;
+    height: 40px;
+    background: var(--ink);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 22px;
+  }
+
+  h1 {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin-top: 2px;
+  }
+
+  .clocks {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+  }
+
+  .clock {
+    text-align: right;
+  }
+
+  .clock-label {
+    color: var(--ink-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+
+  .clock-time {
+    font-weight: 700;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+  }
+
+  @media (max-width: 780px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    box-shadow: var(--shadow);
+  }
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .card-hint {
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-bottom: 18px;
+  }
+
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+    margin-top: 14px;
+  }
+
+  label:first-of-type { margin-top: 0; }
+
+  input, textarea, select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    background: #fafaf8;
+    color: var(--ink);
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: white;
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 90px;
+    font-family: inherit;
+  }
+
+  .quick-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .preset {
+    font-family: inherit;
+    font-size: 12px;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    background: white;
+    border-radius: 999px;
+    cursor: pointer;
+    color: var(--ink-soft);
+    transition: all 0.15s;
+  }
+
+  .preset:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .btn {
+    width: 100%;
+    margin-top: 18px;
+    padding: 12px 18px;
+    border: none;
+    border-radius: 10px;
+    background: var(--ink);
+    color: white;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.05s;
+  }
+
+  .btn:hover { opacity: 0.85; }
+  .btn:active { transform: translateY(1px); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1px solid var(--border);
+  }
+
+  .notif-banner {
+    background: var(--warn-soft);
+    border: 1px solid #f4d27d;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #92400e;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .notif-banner.ok {
+    background: var(--success-soft);
+    border-color: #86efac;
+    color: #065f46;
+  }
+
+  .notif-banner button {
+    background: #92400e;
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .queue-section {
+    margin-bottom: 28px;
+  }
+
+  .queue-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-soft);
+  }
+
+  .badge {
+    background: var(--border);
+    color: var(--ink-soft);
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+  }
+
+  .badge.ready { background: var(--success-soft); color: var(--success); }
+  .badge.pending { background: var(--accent-soft); color: var(--accent); }
+  .badge.sent { background: var(--border); color: var(--ink-muted); }
+
+  .message-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 10px;
+    box-shadow: var(--shadow);
+    transition: border-color 0.2s;
+  }
+
+  .message-item.ready {
+    border-color: var(--success);
+    border-width: 2px;
+    background: linear-gradient(180deg, #f0fdf4 0%, white 60%);
+  }
+
+  .message-item.sent {
+    opacity: 0.55;
+  }
+
+  .message-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+
+  .message-recipient {
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  .message-time {
+    font-size: 12px;
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    line-height: 1.4;
+  }
+
+  .message-time strong {
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .message-body {
+    font-size: 14px;
+    color: var(--ink-soft);
+    white-space: pre-wrap;
+    background: #fafaf8;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin: 8px 0 10px;
+    border: 1px solid var(--border);
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .message-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 7px 14px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: white;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .action-btn:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+
+  .action-btn.primary {
+    background: var(--success);
+    color: white;
+    border-color: var(--success);
+  }
+
+  .action-btn.primary:hover {
+    opacity: 0.9;
+  }
+
+  .action-btn.danger:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: var(--danger-soft);
+  }
+
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--ink-muted);
+    font-size: 14px;
+  }
+
+  .empty-icon {
+    font-size: 36px;
+    margin-bottom: 8px;
+    opacity: 0.4;
+  }
+
+  .countdown {
+    font-size: 11px;
+    color: var(--ink-muted);
+    margin-top: 2px;
+  }
+
+  .countdown.urgent { color: var(--warn); font-weight: 700; }
+
+  .copied-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0;
+    transition: all 0.25s;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  .copied-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .install-hint {
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .install-hint strong { font-weight: 700; }
+
+  .install-hint .close {
+    float: right;
+    cursor: pointer;
+    opacity: 0.6;
+    font-weight: 700;
+  }
+
+  details summary {
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--ink-muted);
+    margin-top: 16px;
+    user-select: none;
+  }
+
+  details summary:hover { color: var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <div class="title">
+      <div class="logo">↻</div>
+      <div>
+        <h1>Boomerang</h1>
+        <div class="subtitle">Write now, send when they're awake</div>
+      </div>
+    </div>
+    <div class="clocks">
+      <div class="clock">
+        <div class="clock-label">Berlin</div>
+        <div class="clock-time" id="clock-berlin">—</div>
+      </div>
+      <div class="clock">
+        <div class="clock-label">Bogotá</div>
+        <div class="clock-time" id="clock-bogota">—</div>
+      </div>
+    </div>
+  </header>
+
+  <div id="install-hint" class="install-hint" style="display:none">
+    <span class="close" onclick="dismissInstallHint()">×</span>
+    <strong>Tip:</strong> Click the install icon in your browser's address bar (⊕) to install Boomerang as a desktop app — it'll get its own window and notifications work even when minimized.
+  </div>
+
+  <div id="notif-banner" class="notif-banner" style="display:none">
+    <span><strong>Enable notifications</strong> so Boomerang can alert you when a message is ready to send.</span>
+    <button onclick="requestNotificationPermission()">Enable</button>
+  </div>
+
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-title">New scheduled message</div>
+      <div class="card-hint">It'll boomerang back to you at the time you pick.</div>
+
+      <label for="recipient">To (name or note)</label>
+      <input type="text" id="recipient" placeholder="e.g. Karen, Duncan, SED group">
+
+      <label for="message">Message</label>
+      <textarea id="message" placeholder="What you want to send..."></textarea>
+
+      <label for="sendat">Send back to me at</label>
+      <input type="datetime-local" id="sendat">
+
+      <div class="quick-presets">
+        <button class="preset" data-preset="bogota-9">9am Bogotá tomorrow</button>
+        <button class="preset" data-preset="bogota-2pm">2pm Bogotá today</button>
+        <button class="preset" data-preset="berlin-3pm-mon">Mon 3pm Berlin</button>
+        <button class="preset" data-preset="+1h">In 1 hour</button>
+        <button class="preset" data-preset="+3h">In 3 hours</button>
+      </div>
+
+      <button class="btn" onclick="addMessage()">Schedule message</button>
+
+      <details>
+        <summary>About Bogotá time</summary>
+        <div style="font-size:12px;color:var(--ink-muted);margin-top:8px;line-height:1.5">
+          Bogotá is currently <span id="tz-diff"></span> hours behind Berlin. Good sending window for most professional contacts: 8am–6pm Bogotá time (= <span id="bogota-work-berlin"></span> Berlin).
+        </div>
+      </details>
+    </div>
+
+    <div>
+      <div class="queue-section">
+        <div class="queue-header">
+          Ready to send <span class="badge ready" id="ready-count">0</span>
+        </div>
+        <div id="ready-list"></div>
+      </div>
+
+      <div class="queue-section">
+        <div class="queue-header">
+          Waiting <span class="badge pending" id="pending-count">0</span>
+        </div>
+        <div id="pending-list"></div>
+      </div>
+
+      <div class="queue-section">
+        <div class="queue-header">
+          Sent / archived <span class="badge sent" id="sent-count">0</span>
+        </div>
+        <div id="sent-list"></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="toast" class="copied-toast">Copied to clipboard</div>
+
+<script>
+  // ============ State ============
+  const STORAGE_KEY = 'boomerang_messages_v1';
+  let messages = [];
+
+  function loadMessages() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      messages = raw ? JSON.parse(raw) : [];
+    } catch { messages = []; }
+  }
+
+  function saveMessages() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+  }
+
+  // ============ Clocks ============
+  function fmtTime(date, tz) {
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz,
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      weekday: 'short', day: '2-digit', month: 'short'
+    }).format(date);
+  }
+
+  function updateClocks() {
+    const now = new Date();
+    document.getElementById('clock-berlin').textContent = fmtTime(now, 'Europe/Berlin');
+    document.getElementById('clock-bogota').textContent = fmtTime(now, 'America/Bogota');
+
+    // tz diff
+    const berlinH = parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: 'numeric', hour12: false }).format(now));
+    const bogotaH = parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Bogota', hour: 'numeric', hour12: false }).format(now));
+    let diff = berlinH - bogotaH;
+    if (diff < 0) diff += 24;
+    const tzEl = document.getElementById('tz-diff');
+    if (tzEl) tzEl.textContent = diff;
+    const wEl = document.getElementById('bogota-work-berlin');
+    if (wEl) wEl.textContent = `${(8 + diff) % 24}:00–${(18 + diff) % 24}:00`;
+  }
+
+  // ============ Presets ============
+  function applyPreset(preset) {
+    const now = new Date();
+    let target;
+    // Helper: get current Bogotá hour
+    const bogotaHour = parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Bogota', hour: 'numeric', hour12: false }).format(now));
+
+    if (preset === 'bogota-9') {
+      // 9am Bogotá tomorrow
+      target = bogotaTimeAt(9, 0, 1);
+    } else if (preset === 'bogota-2pm') {
+      // 2pm Bogotá today (or tomorrow if already passed)
+      target = bogotaTimeAt(14, 0, bogotaHour >= 14 ? 1 : 0);
+    } else if (preset === 'berlin-3pm-mon') {
+      target = nextWeekdayBerlin(1, 15, 0); // Monday 3pm Berlin
+    } else if (preset === '+1h') {
+      target = new Date(now.getTime() + 60 * 60 * 1000);
+    } else if (preset === '+3h') {
+      target = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+    }
+    if (target) {
+      document.getElementById('sendat').value = toLocalInputValue(target);
+    }
+  }
+
+  function bogotaTimeAt(hour, minute, daysAhead) {
+    // Construct a date that is hour:minute in Bogotá, daysAhead from today (Bogotá today)
+    const now = new Date();
+    const bogotaDateStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).format(now);
+    const [y, m, d] = bogotaDateStr.split('-').map(Number);
+    // Bogotá is UTC-5 (no DST)
+    const utcMs = Date.UTC(y, m - 1, d + daysAhead, hour + 5, minute);
+    return new Date(utcMs);
+  }
+
+  function nextWeekdayBerlin(weekday, hour, minute) {
+    // weekday: 0=Sun..6=Sat
+    const now = new Date();
+    const berlinDateStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short'
+    }).formatToParts(now);
+    const parts = {};
+    berlinDateStr.forEach(p => { parts[p.type] = p.value; });
+    const todayWeekday = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(parts.weekday);
+    let daysToAdd = (weekday - todayWeekday + 7) % 7;
+    if (daysToAdd === 0) daysToAdd = 7; // next week's same weekday
+    const y = parseInt(parts.year), m = parseInt(parts.month), d = parseInt(parts.day);
+    // Approximate Berlin offset (varies w/ DST). We'll set as local Berlin time by constructing in local TZ-aware way:
+    // Easier: build an ISO date string and let Date parse local, then we just set the local-input directly.
+    const target = new Date(`${y}-${String(m).padStart(2,'0')}-${String(d + daysToAdd).padStart(2,'0')}T${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}:00`);
+    return target;
+  }
+
+  function toLocalInputValue(date) {
+    const pad = n => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  // ============ Add / remove ============
+  function addMessage() {
+    const recipient = document.getElementById('recipient').value.trim();
+    const message = document.getElementById('message').value.trim();
+    const sendat = document.getElementById('sendat').value;
+    if (!recipient || !message || !sendat) {
+      alert('Please fill in recipient, message, and send time.');
+      return;
+    }
+    const sendDate = new Date(sendat);
+    messages.push({
+      id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
+      recipient, message,
+      sendAt: sendDate.toISOString(),
+      createdAt: new Date().toISOString(),
+      status: 'pending',
+      notified: false
+    });
+    saveMessages();
+    document.getElementById('recipient').value = '';
+    document.getElementById('message').value = '';
+    document.getElementById('sendat').value = '';
+    render();
+  }
+
+  function markSent(id) {
+    const m = messages.find(x => x.id === id);
+    if (m) { m.status = 'sent'; m.sentAt = new Date().toISOString(); saveMessages(); render(); }
+  }
+
+  function unsend(id) {
+    const m = messages.find(x => x.id === id);
+    if (m) { m.status = 'pending'; m.notified = false; delete m.sentAt; saveMessages(); render(); }
+  }
+
+  function deleteMessage(id) {
+    if (!confirm('Delete this message?')) return;
+    messages = messages.filter(m => m.id !== id);
+    saveMessages();
+    render();
+  }
+
+  function copyMessage(id) {
+    const m = messages.find(x => x.id === id);
+    if (!m) return;
+    navigator.clipboard.writeText(m.message).then(() => {
+      const toast = document.getElementById('toast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1600);
+    });
+  }
+
+  // ============ Render ============
+  function formatSendAt(iso) {
+    const d = new Date(iso);
+    const berlin = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Berlin',
+      weekday: 'short', day: '2-digit', month: 'short',
+      hour: '2-digit', minute: '2-digit'
+    }).format(d);
+    const bogota = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'America/Bogota',
+      hour: '2-digit', minute: '2-digit'
+    }).format(d);
+    return { berlin, bogota };
+  }
+
+  function countdown(iso) {
+    const diff = new Date(iso) - new Date();
+    if (diff <= 0) return null;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `in ${mins}m`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `in ${hours}h ${mins % 60}m`;
+    const days = Math.floor(hours / 24);
+    return `in ${days}d ${hours % 24}h`;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function renderItem(m) {
+    const now = new Date();
+    const sendDate = new Date(m.sendAt);
+    const isReady = m.status === 'pending' && sendDate <= now;
+    const isSent = m.status === 'sent';
+    const times = formatSendAt(m.sendAt);
+    const cd = countdown(m.sendAt);
+    const cdClass = cd && (sendDate - now) < 60 * 60 * 1000 ? 'urgent' : '';
+
+    return `
+      <div class="message-item ${isReady ? 'ready' : ''} ${isSent ? 'sent' : ''}">
+        <div class="message-head">
+          <div>
+            <div class="message-recipient">${escapeHtml(m.recipient)}</div>
+            ${isSent ? `<div class="countdown">Sent ${new Date(m.sentAt).toLocaleString()}</div>` : (cd ? `<div class="countdown ${cdClass}">${cd}</div>` : '')}
+          </div>
+          <div class="message-time">
+            <strong>${times.berlin}</strong> Berlin<br>
+            <span style="color:var(--ink-muted)">${times.bogota} Bogotá</span>
+          </div>
+        </div>
+        <div class="message-body">${escapeHtml(m.message)}</div>
+        <div class="message-actions">
+          ${!isSent ? `<button class="action-btn primary" onclick="copyMessage('${m.id}')">📋 Copy message</button>` : ''}
+          ${!isSent ? `<button class="action-btn" onclick="markSent('${m.id}')">Mark sent</button>` : `<button class="action-btn" onclick="unsend('${m.id}')">Un-send</button>`}
+          <button class="action-btn danger" onclick="deleteMessage('${m.id}')">Delete</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function render() {
+    const now = new Date();
+    const ready = messages.filter(m => m.status === 'pending' && new Date(m.sendAt) <= now)
+      .sort((a,b) => new Date(a.sendAt) - new Date(b.sendAt));
+    const pending = messages.filter(m => m.status === 'pending' && new Date(m.sendAt) > now)
+      .sort((a,b) => new Date(a.sendAt) - new Date(b.sendAt));
+    const sent = messages.filter(m => m.status === 'sent')
+      .sort((a,b) => new Date(b.sentAt) - new Date(a.sentAt))
+      .slice(0, 20);
+
+    document.getElementById('ready-count').textContent = ready.length;
+    document.getElementById('pending-count').textContent = pending.length;
+    document.getElementById('sent-count').textContent = sent.length;
+
+    document.getElementById('ready-list').innerHTML = ready.length
+      ? ready.map(renderItem).join('')
+      : '<div class="empty"><div class="empty-icon">⏳</div>Nothing ready yet. Scheduled messages will appear here when their time comes.</div>';
+
+    document.getElementById('pending-list').innerHTML = pending.length
+      ? pending.map(renderItem).join('')
+      : '<div class="empty" style="padding:20px"><span style="opacity:0.5">No messages waiting.</span></div>';
+
+    document.getElementById('sent-list').innerHTML = sent.length
+      ? sent.map(renderItem).join('')
+      : '<div class="empty" style="padding:20px"><span style="opacity:0.5">No sent messages yet.</span></div>';
+  }
+
+  // ============ Notifications ============
+  function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+      alert('This browser does not support desktop notifications.');
+      return;
+    }
+    Notification.requestPermission().then(result => {
+      updateNotifBanner();
+    });
+  }
+
+  function updateNotifBanner() {
+    const banner = document.getElementById('notif-banner');
+    if (!('Notification' in window)) {
+      banner.style.display = 'none';
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      banner.style.display = 'none';
+    } else if (Notification.permission === 'denied') {
+      banner.style.display = 'flex';
+      banner.classList.remove('ok');
+      banner.innerHTML = '<span><strong>Notifications blocked.</strong> Enable them in your browser settings so Boomerang can alert you.</span>';
+    } else {
+      banner.style.display = 'flex';
+      banner.innerHTML = '<span><strong>Enable notifications</strong> so Boomerang can alert you when a message is ready to send.</span><button onclick="requestNotificationPermission()">Enable</button>';
+    }
+  }
+
+  function checkAndNotify() {
+    const now = new Date();
+    messages.forEach(m => {
+      if (m.status === 'pending' && !m.notified && new Date(m.sendAt) <= now) {
+        m.notified = true;
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try {
+            const n = new Notification(`↻ Ready to send to ${m.recipient}`, {
+              body: m.message.length > 100 ? m.message.slice(0, 100) + '…' : m.message,
+              tag: m.id,
+              requireInteraction: true
+            });
+            n.onclick = () => {
+              window.focus();
+              n.close();
+            };
+          } catch (e) { console.warn(e); }
+        }
+        saveMessages();
+      }
+    });
+  }
+
+  // ============ Install hint ============
+  function dismissInstallHint() {
+    document.getElementById('install-hint').style.display = 'none';
+    localStorage.setItem('boomerang_hint_dismissed', '1');
+  }
+
+  function maybeShowInstallHint() {
+    if (localStorage.getItem('boomerang_hint_dismissed')) return;
+    // Show after a few seconds
+    setTimeout(() => {
+      const hint = document.getElementById('install-hint');
+      if (hint) hint.style.display = 'block';
+    }, 2000);
+  }
+
+  // ============ Init ============
+  document.addEventListener('DOMContentLoaded', () => {
+    // Register service worker (enables PWA install + offline)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW registration failed:', err));
+    }
+
+    loadMessages();
+    updateClocks();
+    render();
+    updateNotifBanner();
+    maybeShowInstallHint();
+
+    setInterval(() => {
+      updateClocks();
+      render();
+      checkAndNotify();
+    }, 5000);
+
+    // Presets
+    document.querySelectorAll('.preset').forEach(btn => {
+      btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+    });
+
+    // Default send time = 9am Bogotá tomorrow
+    document.getElementById('sendat').value = toLocalInputValue(bogotaTimeAt(9, 0, 1));
+  });
+</script>
+
+</body>
+</html>

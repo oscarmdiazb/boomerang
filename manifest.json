@@ -1,0 +1,31 @@
+{
+  "name": "Boomerang — Message Scheduler",
+  "short_name": "Boomerang",
+  "description": "Write messages now, get them back to send when the recipient is awake.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f5f2",
+  "theme_color": "#1a1a1a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
