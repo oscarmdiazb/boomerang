@@ -184,6 +184,16 @@
     margin-top: 8px;
   }
 
+  .preset-row-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 14px;
+    margin-bottom: 4px;
+  }
+
   .preset {
     font-family: inherit;
     font-size: 12px;
@@ -200,6 +210,54 @@
     border-color: var(--accent);
     color: var(--accent);
     background: var(--accent-soft);
+  }
+
+  .preset.active {
+    background: var(--ink);
+    color: white;
+    border-color: var(--ink);
+  }
+
+  .preset.active:hover {
+    background: var(--ink);
+    color: white;
+    border-color: var(--ink);
+    opacity: 0.9;
+  }
+
+  .tz-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 12px;
+  }
+
+  .tz-table th {
+    text-align: left;
+    padding: 6px 8px;
+    background: #fafaf8;
+    color: var(--ink-soft);
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tz-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tz-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .tz-table tr.work td {
+    background: var(--success-soft);
+    color: #065f46;
+    font-weight: 600;
   }
 
   .btn {
@@ -507,21 +565,42 @@
       <label for="sendat">Send back to me at</label>
       <input type="datetime-local" id="sendat">
 
-      <div class="quick-presets">
-        <button class="preset" data-preset="bogota-9">9am Bogotá tomorrow</button>
-        <button class="preset" data-preset="bogota-2pm">2pm Bogotá today</button>
-        <button class="preset" data-preset="berlin-3pm-mon">Mon 3pm Berlin</button>
-        <button class="preset" data-preset="+1h">In 1 hour</button>
-        <button class="preset" data-preset="+3h">In 3 hours</button>
+      <div class="preset-row-label">Day</div>
+      <div class="quick-presets" id="day-presets">
+        <button class="preset day-preset" data-day="0">Hoy</button>
+        <button class="preset day-preset" data-day="1">Mañana</button>
+        <button class="preset day-preset" data-day="custom">Otro día</button>
+      </div>
+
+      <div class="preset-row-label">Hora Bogotá</div>
+      <div class="quick-presets" id="hour-presets">
+        <button class="preset hour-preset" data-hour="7">7 am</button>
+        <button class="preset hour-preset" data-hour="8">8 am</button>
+        <button class="preset hour-preset" data-hour="9">9 am</button>
+        <button class="preset hour-preset" data-hour="10">10 am</button>
+        <button class="preset hour-preset" data-hour="12">12 pm</button>
+        <button class="preset hour-preset" data-hour="14">2 pm</button>
+        <button class="preset hour-preset" data-hour="16">4 pm</button>
+      </div>
+
+      <div class="quick-presets" style="margin-top:10px">
+        <button class="preset" data-preset="+1h">En 1 hora</button>
+        <button class="preset" data-preset="+3h">En 3 horas</button>
       </div>
 
       <button class="btn" onclick="addMessage()">Schedule message</button>
 
       <details>
-        <summary>About Bogotá time</summary>
+        <summary>Tabla de conversión Bogotá ↔ Berlín</summary>
         <div style="font-size:12px;color:var(--ink-muted);margin-top:8px;line-height:1.5">
-          Bogotá is currently <span id="tz-diff"></span> hours behind Berlin. Good sending window for most professional contacts: 8am–6pm Bogotá time (= <span id="bogota-work-berlin"></span> Berlin).
+          Bogotá está <span id="tz-diff"></span> horas detrás de Berlín. Las filas resaltadas son horas laborales en Bogotá (8am–6pm).
         </div>
+        <table class="tz-table" id="tz-table">
+          <thead>
+            <tr><th>Bogotá</th><th>Berlín</th></tr>
+          </thead>
+          <tbody id="tz-table-body"></tbody>
+        </table>
       </details>
     </div>
 
@@ -591,32 +670,81 @@
     if (diff < 0) diff += 24;
     const tzEl = document.getElementById('tz-diff');
     if (tzEl) tzEl.textContent = diff;
-    const wEl = document.getElementById('bogota-work-berlin');
-    if (wEl) wEl.textContent = `${(8 + diff) % 24}:00–${(18 + diff) % 24}:00`;
+  }
+
+  function buildTzTable() {
+    // Compute current offset between Bogotá and Berlin
+    const now = new Date();
+    const berlinH = parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Berlin', hour: 'numeric', hour12: false }).format(now));
+    const bogotaH = parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Bogota', hour: 'numeric', hour12: false }).format(now));
+    let diff = berlinH - bogotaH;
+    if (diff < 0) diff += 24;
+
+    const tbody = document.getElementById('tz-table-body');
+    if (!tbody) return;
+
+    const rows = [];
+    for (let h = 0; h < 24; h++) {
+      const berlin = (h + diff) % 24;
+      const isWork = h >= 8 && h <= 18;
+      rows.push(`<tr class="${isWork ? 'work' : ''}"><td>${formatHour12(h)}</td><td>${formatHour12(berlin)}</td></tr>`);
+    }
+    tbody.innerHTML = rows.join('');
+  }
+
+  function formatHour12(h) {
+    const period = h < 12 ? 'am' : 'pm';
+    let h12 = h % 12;
+    if (h12 === 0) h12 = 12;
+    return `${h12}:00 ${period}`;
   }
 
   // ============ Presets ============
+  let selectedDay = 0;   // 0=today, 1=tomorrow, or null if custom date already in input
+  let selectedHour = null; // 0-23 Bogotá hour selected from chip
+
+  function applyDayHour() {
+    if (selectedDay === null || selectedHour === null) return;
+    const target = bogotaTimeAt(selectedHour, 0, selectedDay);
+    document.getElementById('sendat').value = toLocalInputValue(target);
+  }
+
+  function setDay(day) {
+    selectedDay = day;
+    document.querySelectorAll('.day-preset').forEach(b => {
+      b.classList.toggle('active', String(b.dataset.day) === String(day));
+    });
+    if (day === 'custom') {
+      // Focus the datetime input so user can pick a date
+      document.getElementById('sendat').focus();
+      selectedDay = null;
+    } else {
+      applyDayHour();
+    }
+  }
+
+  function setHour(hour) {
+    selectedHour = hour;
+    document.querySelectorAll('.hour-preset').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.hour) === hour);
+    });
+    if (selectedDay !== null) applyDayHour();
+  }
+
   function applyPreset(preset) {
     const now = new Date();
     let target;
-    // Helper: get current Bogotá hour
-    const bogotaHour = parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Bogota', hour: 'numeric', hour12: false }).format(now));
-
-    if (preset === 'bogota-9') {
-      // 9am Bogotá tomorrow
-      target = bogotaTimeAt(9, 0, 1);
-    } else if (preset === 'bogota-2pm') {
-      // 2pm Bogotá today (or tomorrow if already passed)
-      target = bogotaTimeAt(14, 0, bogotaHour >= 14 ? 1 : 0);
-    } else if (preset === 'berlin-3pm-mon') {
-      target = nextWeekdayBerlin(1, 15, 0); // Monday 3pm Berlin
-    } else if (preset === '+1h') {
+    if (preset === '+1h') {
       target = new Date(now.getTime() + 60 * 60 * 1000);
     } else if (preset === '+3h') {
       target = new Date(now.getTime() + 3 * 60 * 60 * 1000);
     }
     if (target) {
       document.getElementById('sendat').value = toLocalInputValue(target);
+      // Clear chip selections since this is a free-form choice
+      document.querySelectorAll('.day-preset, .hour-preset').forEach(b => b.classList.remove('active'));
+      selectedDay = null;
+      selectedHour = null;
     }
   }
 
@@ -630,24 +758,6 @@
     // Bogotá is UTC-5 (no DST)
     const utcMs = Date.UTC(y, m - 1, d + daysAhead, hour + 5, minute);
     return new Date(utcMs);
-  }
-
-  function nextWeekdayBerlin(weekday, hour, minute) {
-    // weekday: 0=Sun..6=Sat
-    const now = new Date();
-    const berlinDateStr = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short'
-    }).formatToParts(now);
-    const parts = {};
-    berlinDateStr.forEach(p => { parts[p.type] = p.value; });
-    const todayWeekday = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(parts.weekday);
-    let daysToAdd = (weekday - todayWeekday + 7) % 7;
-    if (daysToAdd === 0) daysToAdd = 7; // next week's same weekday
-    const y = parseInt(parts.year), m = parseInt(parts.month), d = parseInt(parts.day);
-    // Approximate Berlin offset (varies w/ DST). We'll set as local Berlin time by constructing in local TZ-aware way:
-    // Easier: build an ISO date string and let Date parse local, then we just set the local-input directly.
-    const target = new Date(`${y}-${String(m).padStart(2,'0')}-${String(d + daysToAdd).padStart(2,'0')}T${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}:00`);
-    return target;
   }
 
   function toLocalInputValue(date) {
@@ -871,6 +981,7 @@
 
     loadMessages();
     updateClocks();
+    buildTzTable();
     render();
     updateNotifBanner();
     maybeShowInstallHint();
@@ -881,13 +992,39 @@
       checkAndNotify();
     }, 5000);
 
-    // Presets
-    document.querySelectorAll('.preset').forEach(btn => {
+    // Day chips
+    document.querySelectorAll('.day-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const d = btn.dataset.day;
+        setDay(d === 'custom' ? 'custom' : parseInt(d));
+      });
+    });
+
+    // Hour chips
+    document.querySelectorAll('.hour-preset').forEach(btn => {
+      btn.addEventListener('click', () => setHour(parseInt(btn.dataset.hour)));
+    });
+
+    // "In X hours" presets
+    document.querySelectorAll('.preset[data-preset]').forEach(btn => {
       btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
     });
 
-    // Default send time = 9am Bogotá tomorrow
-    document.getElementById('sendat').value = toLocalInputValue(bogotaTimeAt(9, 0, 1));
+    // When user manually edits the date input, clear chip selections
+    document.getElementById('sendat').addEventListener('input', () => {
+      document.querySelectorAll('.day-preset, .hour-preset').forEach(b => b.classList.remove('active'));
+      selectedDay = null;
+      selectedHour = null;
+    });
+
+    // Default send time = 9am Bogotá today (or tomorrow if already past)
+    const nowBogotaH = parseInt(new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Bogota', hour: 'numeric', hour12: false }).format(new Date()));
+    const defaultDay = nowBogotaH >= 9 ? 1 : 0;
+    selectedDay = defaultDay;
+    selectedHour = 9;
+    document.querySelector(`.day-preset[data-day="${defaultDay}"]`)?.classList.add('active');
+    document.querySelector(`.hour-preset[data-hour="9"]`)?.classList.add('active');
+    document.getElementById('sendat').value = toLocalInputValue(bogotaTimeAt(9, 0, defaultDay));
   });
 </script>
 
