@@ -637,6 +637,7 @@
   // ============ State ============
   const STORAGE_KEY = 'boomerang_messages_v1';
   let messages = [];
+  let editingId = null; // ID of message being edited, or null
 
   function loadMessages() {
     try {
@@ -775,14 +776,33 @@
       return;
     }
     const sendDate = new Date(sendat);
-    messages.push({
-      id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
-      recipient, message,
-      sendAt: sendDate.toISOString(),
-      createdAt: new Date().toISOString(),
-      status: 'pending',
-      notified: false
-    });
+
+    if (editingId) {
+      // Update existing message
+      const m = messages.find(x => x.id === editingId);
+      if (m) {
+        m.recipient = recipient;
+        m.message = message;
+        m.sendAt = sendDate.toISOString();
+        m.notified = false; // re-arm notification if time changed
+        m.editedAt = new Date().toISOString();
+      }
+      editingId = null;
+      document.querySelector('.btn').textContent = 'Schedule message';
+      const cancelBtn = document.getElementById('cancel-edit-btn');
+      if (cancelBtn) cancelBtn.remove();
+    } else {
+      // New message
+      messages.push({
+        id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
+        recipient, message,
+        sendAt: sendDate.toISOString(),
+        createdAt: new Date().toISOString(),
+        status: 'pending',
+        notified: false
+      });
+    }
+
     saveMessages();
     document.getElementById('recipient').value = '';
     document.getElementById('message').value = '';
@@ -805,6 +825,45 @@
     messages = messages.filter(m => m.id !== id);
     saveMessages();
     render();
+  }
+
+  function editMessage(id) {
+    const m = messages.find(x => x.id === id);
+    if (!m) return;
+    // Load the message into the form
+    document.getElementById('recipient').value = m.recipient;
+    document.getElementById('message').value = m.message;
+    // Convert the stored ISO time back to local datetime-input format
+    document.getElementById('sendat').value = toLocalInputValue(new Date(m.sendAt));
+    // Clear chip selections since we're loading a custom time
+    document.querySelectorAll('.day-preset, .hour-preset').forEach(b => b.classList.remove('active'));
+    selectedDay = null;
+    selectedHour = null;
+    // Switch the form to "edit mode"
+    editingId = id;
+    document.querySelector('.btn').textContent = 'Actualizar mensaje';
+    // Add a cancel button if not already present
+    if (!document.getElementById('cancel-edit-btn')) {
+      const cancelBtn = document.createElement('button');
+      cancelBtn.id = 'cancel-edit-btn';
+      cancelBtn.className = 'btn btn-ghost';
+      cancelBtn.textContent = 'Cancelar edición';
+      cancelBtn.style.marginTop = '8px';
+      cancelBtn.onclick = cancelEdit;
+      document.querySelector('.btn').after(cancelBtn);
+    }
+    // Scroll the form into view for convenience
+    document.getElementById('recipient').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.getElementById('message').focus();
+  }
+
+  function cancelEdit() {
+    editingId = null;
+    document.getElementById('recipient').value = '';
+    document.getElementById('message').value = '';
+    document.querySelector('.btn').textContent = 'Schedule message';
+    const cancelBtn = document.getElementById('cancel-edit-btn');
+    if (cancelBtn) cancelBtn.remove();
   }
 
   function copyMessage(id) {
@@ -872,6 +931,7 @@
         <div class="message-actions">
           ${!isSent ? `<button class="action-btn primary" onclick="copyMessage('${m.id}')">📋 Copy message</button>` : ''}
           ${!isSent ? `<button class="action-btn" onclick="markSent('${m.id}')">Mark sent</button>` : `<button class="action-btn" onclick="unsend('${m.id}')">Un-send</button>`}
+          ${!isSent ? `<button class="action-btn" onclick="editMessage('${m.id}')">✏️ Editar</button>` : ''}
           <button class="action-btn danger" onclick="deleteMessage('${m.id}')">Delete</button>
         </div>
       </div>

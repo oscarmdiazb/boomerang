@@ -1,6 +1,6 @@
 // Boomerang service worker
 // Bumping VERSION will force a refresh of cached assets.
-const VERSION = 'boomerang-v2';
+const VERSION = 'boomerang-v3';
 const ASSETS = [
   './',
   './index.html',
